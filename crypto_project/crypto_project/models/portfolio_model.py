@@ -1,0 +1,1 @@
+#Functions for tracking your crypto currencies, displaying total value USD(and conversions if possible), Portfolio percentage of each crypto, track portfolio profit/loss, tracking numbers of each crypto

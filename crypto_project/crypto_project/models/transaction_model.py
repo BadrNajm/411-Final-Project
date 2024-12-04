@@ -1,0 +1,1 @@
+# Functions for Buy, Sell, Stop Loss, Custom Sell (when target price is reached), Custom Buy (when target price is reached), edit/delete pending custom transaction, recurring sell/ reccuring buy
