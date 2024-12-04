@@ -2,7 +2,7 @@
 
 Overview: The Crypto Trading Application is a simple tool designed for crypto traders/investors who want to manage their crypto portfolios, execute trades, and monitor market conditions. 
 
-API: CoinGecko?
+API: CoinGecko
 
 Features:
 
