@@ -1,4 +1,5 @@
 # Crypto Trading Application
+# Team Members: Wasay Rizwan, Badr Najm, Evren Yaman
 
 Overview: The Crypto Trading Application is a simple tool designed for crypto traders/investors who want to manage their crypto portfolios, execute trades, and monitor market conditions. 
 
