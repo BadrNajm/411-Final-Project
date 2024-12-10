@@ -42,13 +42,11 @@ class CryptoDataModel:
     def get_price_trends(self, crypto_id: str, days: str = "7") -> Optional[Dict]:
         """
         Get price trends for a specific cryptocurrency.
-        
         Args:
-            crypto_id (str): The ID of the cryptocurrency
-            days (str): Time range for trend data
-            
+            crypto_id (str): The ID of the cryptocurrency.
+            days (str): Time range for trend data (e.g., '7', '30').
         Returns:
-            dict: Price trend data or None if request fails
+            dict: Price trend data or None if the request fails.
         """
         endpoint = f"/coins/{crypto_id}/market_chart"
         params = {
@@ -59,8 +57,13 @@ class CryptoDataModel:
         try:
             response = requests.get(f"{self.base_url}{endpoint}", params=params)
             response.raise_for_status()
-            return response.json()
-        except Exception as e:
+            data = response.json()
+            if "prices" in data:
+                return data
+            logging.error(f"Unexpected structure for price trends: {data}")
+            return None
+        except requests.RequestException as e:
+            logging.error(f"Request failed for price trends of {crypto_id}: {e}")
             return None
 
     def get_top_performing_cryptos(self, limit: int = 10) -> List[Dict]:
@@ -120,13 +123,11 @@ class CryptoDataModel:
     def compare_cryptos(self, crypto_id1: str, crypto_id2: str) -> Dict:
         """
         Compare two cryptocurrencies side by side.
-        
         Args:
-            crypto_id1 (str): First cryptocurrency ID
-            crypto_id2 (str): Second cryptocurrency ID
-            
+            crypto_id1 (str): First cryptocurrency ID.
+            crypto_id2 (str): Second cryptocurrency ID.
         Returns:
-            dict: Comparison data for both cryptocurrencies
+            dict: Comparison data for both cryptocurrencies or an empty dict.
         """
         endpoint = "/coins/markets"
         params = {
@@ -139,6 +140,11 @@ class CryptoDataModel:
         try:
             response = requests.get(f"{self.base_url}{endpoint}", params=params)
             response.raise_for_status()
-            return response.json()
-        except Exception as e:
+            data = response.json()
+            if isinstance(data, list) and len(data) == 2:
+                return {crypto_id1: data[0], crypto_id2: data[1]}
+            logging.error(f"Unexpected structure for crypto comparison: {data}")
+            return {}
+        except requests.RequestException as e:
+            logging.error(f"Request failed for crypto comparison {crypto_id1} vs {crypto_id2}: {e}")
             return {}
