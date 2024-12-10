@@ -1,5 +1,6 @@
 #Functions for looking up specific crypto to get price, trends, leaderboard for top performing and worst performing cryptos, market cap rankings, compare two cryptos side by side (battle?), price alerts
 
+import datetime
 from typing import Dict, List, Optional
 import requests
 
@@ -97,7 +98,24 @@ class CryptoDataModel:
         Returns:
             bool: True if alert is set successfully
         """
-        pass
+        try:
+        # Get current price to validate crypto_id and compare
+            current_price = self.get_crypto_price(crypto_id)
+            
+            if current_price is None:
+                return False
+                
+            alert = {
+                'crypto_id': crypto_id,
+                'target_price': target_price,
+                'current_price': current_price,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            return True
+        
+        except Exception as e:
+            return False
 
     def compare_cryptos(self, crypto_id1: str, crypto_id2: str) -> Dict:
         """
