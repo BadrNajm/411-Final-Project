@@ -18,3 +18,9 @@ def test_get_top_performing_cryptos():
     top_cryptos = model.get_top_performing_cryptos()
     assert isinstance(top_cryptos, list)
     assert len(top_cryptos) <= 10
+
+def test_compare_cryptos():
+    model = CryptoDataModel()
+    comparison = model.compare_cryptos("bitcoin", "ethereum")
+    assert isinstance(comparison, dict)
+    assert len(comparison) > 0
