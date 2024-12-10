@@ -1,5 +1,5 @@
 import logging
-from typing import Dict
+from typing import Dict, Optional
 import requests
 
 # Configure logging
@@ -40,6 +40,22 @@ class Portfolio:
                 logging.error(f"Error fetching price for {crypto_id}: {e}")
                 continue  # Skip to the next crypto_id
         return total_value
+    
+    @classmethod
+    def get_user_portfolio(cls, user_id: int) -> Optional['Portfolio']:
+        """
+        Retrieves the portfolio for a given user.
+
+        Args:
+            user_id (int): The ID of the user.
+
+        Returns:
+            Portfolio: The user's portfolio instance, or None if not found.
+        """
+        portfolio = cls.query.filter_by(user_id=user_id).first()
+        if not portfolio:
+            raise ValueError(f"No portfolio found for user ID {user_id}.")
+        return portfolio
 
     def get_portfolio_percentage(self) -> Dict[str, float]:
         """

@@ -5,6 +5,7 @@ from werkzeug.exceptions import BadRequest, Unauthorized
 from config import ProductionConfig
 from crypto_project.db import db
 from crypto_project.models.transaction_model import TransactionModel
+from crypto_project.models.portfolio_model import Portfolio
 from crypto_project.models.user_model import Users
 
 # Load environment variables from .env file
@@ -94,7 +95,17 @@ def create_app(config_class=ProductionConfig):
             if not user_id or not crypto_id or not transaction_type or not quantity or not price:
                 return make_response(jsonify({'error': 'All fields are required'}), 400)
 
-            TransactionModel.create_transaction(user_id, crypto_id, transaction_type, quantity, price)
+            # Ensure Portfolio instance is available for the user
+            portfolio = Portfolio(user_id=user_id, holdings={}, cash_balance=1000.0)  # Mock Portfolio for simplicity
+
+            # Create transaction
+            TransactionModel.create_transaction(
+                user_id=user_id,
+                crypto_id=crypto_id,
+                transaction_type=transaction_type,
+                quantity=quantity,
+                price=price
+            )
             app.logger.info("Transaction created: %s", data)
             return make_response(jsonify({'status': 'transaction created'}), 201)
         except Exception as e:
