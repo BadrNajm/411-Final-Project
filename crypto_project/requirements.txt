@@ -6,3 +6,7 @@ python-dotenv==1.0.1
 redis==5.2.0
 requests==2.32.3
 SQLAlchemy==2.0.36
+pillow==9.0.1
+qrcode==7.3
+pyotp==2.6.0
+pytest==7.0.1

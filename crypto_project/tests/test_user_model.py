@@ -1,6 +1,7 @@
 import pytest
-
-from meal_max.models.user_model import Users
+import pyotp
+from crypto_project.models.user_model import Users
+from crypto_project.utils import generate_totp_secret, verify_totp_token
 
 
 @pytest.fixture
@@ -9,6 +10,11 @@ def sample_user():
         "username": "testuser",
         "password": "securepassword123"
     }
+
+@pytest.fixture
+def totp_secret():
+    """Fixture to generate a TOTP secret."""
+    return generate_totp_secret()
 
 
 ##########################################################
@@ -48,6 +54,25 @@ def test_check_password_user_not_found(session):
     """Test checking password for a non-existent user."""
     with pytest.raises(ValueError, match="User nonexistentuser not found"):
         Users.check_password("nonexistentuser", "password")
+
+##########################################################
+# 2FA Functionality
+##########################################################
+
+def test_generate_totp_secret(totp_secret):
+    """Test that a TOTP secret is generated correctly."""
+    assert len(totp_secret) > 0, "TOTP secret should not be empty."
+    assert isinstance(totp_secret, str), "TOTP secret should be a string."
+
+def test_verify_totp_token_valid(totp_secret):
+    """Test verifying a valid TOTP token."""
+    totp = pyotp.TOTP(totp_secret)
+    token = totp.now()
+    assert verify_totp_token(totp_secret, token) is True, "Valid TOTP token should pass verification."
+
+def test_verify_totp_token_invalid(totp_secret):
+    """Test verifying an invalid TOTP token."""
+    assert verify_totp_token(totp_secret, "123456") is False, "Invalid TOTP token should fail verification."
 
 ##########################################################
 # Update Password

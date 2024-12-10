@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Set the name of the virtual environment directory
 VENV_DIR="meal_max_venv"
 REQUIREMENTS_FILE="requirements.lock"
