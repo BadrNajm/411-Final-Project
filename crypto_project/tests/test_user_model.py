@@ -1,7 +1,7 @@
 import pytest
 import pyotp
 from crypto_project.models.user_model import Users
-from crypto_project.utils import generate_totp_secret, verify_totp_token
+from crypto_project.utils.TwoFA_utils import generate_totp_secret, verify_totp_token
 
 
 @pytest.fixture

@@ -4,14 +4,15 @@ from crypto_project.models.portfolio_model import Portfolio
 
 @pytest.fixture
 def portfolio():
-    """Fixture to create a Portfolio instance with sample holdings."""
-    return Portfolio(user_id=1, holdings={"bitcoin": 2, "ethereum": 3})
+    """Fixture to create a Portfolio instance with sample holdings and cash balance."""
+    return Portfolio(user_id=1, holdings={"bitcoin": 2, "ethereum": 3}, cash_balance=1000.0)
+
 
 
 @pytest.fixture
 def mock_get_crypto_price():
     """Fixture to mock the _get_crypto_price method."""
-    with patch('portfolio_model.Portfolio._get_crypto_price') as mock_price:
+    with patch('crypto_project.models.portfolio_model.Portfolio._get_crypto_price') as mock_price:
         yield mock_price
 
 
@@ -43,9 +44,14 @@ def test_get_total_value_with_api_error(portfolio, mock_get_crypto_price):
 
 def test_get_portfolio_percentage(portfolio, mock_get_crypto_price):
     """Test calculating the portfolio percentage distribution."""
-    mock_get_crypto_price.side_effect = lambda crypto_id, currency: {"bitcoin": 100.0, "ethereum": 100.0}[crypto_id]
+    mock_get_crypto_price.side_effect = lambda crypto_id, currency='USD': {
+        ("bitcoin", "USD"): 100.0,
+        ("ethereum", "USD"): 100.0
+    }[(crypto_id, currency)]
     percentages = portfolio.get_portfolio_percentage()
     assert percentages == {"bitcoin": 40.0, "ethereum": 60.0}
+
+
 
 
 ######################################################

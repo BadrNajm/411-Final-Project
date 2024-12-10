@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from sqlalchemy import Column, Integer, Float, String, Boolean, DateTime
-from meal_max.db import db
-from portfolio_model import Portfolio
+from crypto_project.db import db
+from crypto_project.models.portfolio_model import Portfolio
 
 class TransactionModel(db.Model):
     __tablename__ = 'transactions'

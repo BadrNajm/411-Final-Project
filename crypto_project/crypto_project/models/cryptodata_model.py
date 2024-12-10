@@ -1,8 +1,9 @@
 #Functions for looking up specific crypto to get price, trends, leaderboard for top performing and worst performing cryptos, market cap rankings, compare two cryptos side by side (battle?), price alerts
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 import requests
-from datetime import datetime
+
+import logging
 
 class CryptoDataModel:
     def __init__(self):
@@ -11,13 +12,13 @@ class CryptoDataModel:
 
     def get_crypto_price(self, crypto_id: str) -> Optional[float]:
         """
-        Get current price of a specific cryptocurrency in USD.
+        Get the current price of a specific cryptocurrency in USD.
         
         Args:
-            crypto_id (str): The ID of the cryptocurrency (e.g., 'bitcoin')
+            crypto_id (str): The ID of the cryptocurrency (e.g., 'bitcoin').
             
         Returns:
-            float: Current price in USD or None if request fails
+            float: Current price in USD, or None if the request fails.
         """
         endpoint = f"/simple/price"
         params = {
@@ -27,9 +28,15 @@ class CryptoDataModel:
         try:
             response = requests.get(f"{self.base_url}{endpoint}", params=params)
             response.raise_for_status()
-            return response.json()[crypto_id]["usd"]
-        except Exception as e:
+            data = response.json()
+            if crypto_id in data and "usd" in data[crypto_id]:
+                return float(data[crypto_id]["usd"])
+            else:
+                raise ValueError(f"Unexpected response structure: {data}")
+        except (requests.RequestException, ValueError) as e:
+            logging.error(f"Failed to fetch price for {crypto_id}: {e}")
             return None
+
 
     def get_price_trends(self, crypto_id: str, days: str = "7") -> Optional[Dict]:
         """

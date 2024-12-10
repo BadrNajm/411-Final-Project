@@ -6,7 +6,7 @@ import requests
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class Portfolio:
-    def __init__(self, user_id: int, holdings: Dict[str, float]):
+    def __init__(self, user_id: int, holdings: Dict[str, float], cash_balance: float):
         """
         Initializes a portfolio with the user's cryptocurrency holdings.
 
@@ -14,9 +14,11 @@ class Portfolio:
             user_id (int): The ID of the user.
             holdings (Dict[str, float]): A dictionary of cryptocurrency IDs and their quantities.
                                          Example: {"bitcoin": 1.5, "ethereum": 3.0}
+            cash_balance (float): The user's cash balance in USD.                             
         """
         self.user_id = user_id
         self.holdings = holdings
+        self.cash_balance = cash_balance
 
     def get_total_value(self, currency: str = 'USD') -> float:
         """
@@ -30,9 +32,13 @@ class Portfolio:
         """
         total_value = 0.0
         for crypto_id, amount in self.holdings.items():
-            price = self._get_crypto_price(crypto_id, currency)
-            total_value += price * amount
-        logging.info(f"Total portfolio value for user {self.user_id}: {total_value} {currency}")
+            try:
+                price = self._get_crypto_price(crypto_id, currency)
+                if price is not None:
+                    total_value += price * amount
+            except Exception as e:
+                logging.error(f"Error fetching price for {crypto_id}: {e}")
+                continue  # Skip to the next crypto_id
         return total_value
 
     def get_portfolio_percentage(self) -> Dict[str, float]:
@@ -122,3 +128,38 @@ class Portfolio:
             logging.error(f"Invalid JSON response while fetching price for {crypto_id}: {e}")
             return 0.0
 
+    def get_cash_balance(self) -> float:
+            """
+            Retrieves the user's current cash balance.
+
+            Returns:
+                float: The user's available fiat currency balance.
+            """
+            return self.cash_balance
+
+    def adjust_cash_balance(self, amount: float) -> None:
+        """
+        Adjusts the user's cash balance.
+
+        Args:
+            amount (float): The amount to adjust (positive for deposits, negative for spending).
+
+        Raises:
+            ValueError: If the adjustment results in a negative balance.
+        """
+        new_balance = self.cash_balance + amount
+        if new_balance < 0:
+            raise ValueError("Insufficient cash balance.")
+        self.cash_balance = new_balance
+
+    def validate_cash_for_purchase(self, total_cost: float) -> bool:
+        """
+        Validates if the user has enough cash for a purchase.
+
+        Args:
+            total_cost (float): The total cost of the purchase.
+
+        Returns:
+            bool: True if the user has sufficient balance, False otherwise.
+        """
+        return self.cash_balance >= total_cost
