@@ -1,12 +1,11 @@
 import hashlib
 import logging
 import os
+import pyotp
 
 from sqlalchemy.exc import IntegrityError
-
-from meal_max.db import db
-from meal_max.utils.logger import configure_logger
-
+from crypto_project.db import db
+from crypto_project.utils.logger import configure_logger
 
 logger = logging.getLogger(__name__)
 configure_logger(logger)
@@ -19,6 +18,7 @@ class Users(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     salt = db.Column(db.String(32), nullable=False)  # 16-byte salt in hex
     password = db.Column(db.String(64), nullable=False)  # SHA-256 hash in hex
+    totp_secret = db.Column(db.String(16), nullable=False)  # 16-character base32 secret for TOTP
 
     @classmethod
     def _generate_hashed_password(cls, password: str) -> tuple[str, str]:
@@ -36,9 +36,19 @@ class Users(db.Model):
         return salt, hashed_password
 
     @classmethod
+    def _generate_totp_secret(cls) -> str:
+        """
+        Generate a TOTP secret for 2FA.
+
+        Returns:
+            str: A base32-encoded TOTP secret.
+        """
+        return pyotp.random_base32()
+
+    @classmethod
     def create_user(cls, username: str, password: str) -> None:
         """
-        Create a new user with a salted, hashed password.
+        Create a new user with a salted, hashed password and a TOTP secret.
 
         Args:
             username (str): The username of the user.
@@ -48,7 +58,8 @@ class Users(db.Model):
             ValueError: If a user with the username already exists.
         """
         salt, hashed_password = cls._generate_hashed_password(password)
-        new_user = cls(username=username, salt=salt, password=hashed_password)
+        totp_secret = cls._generate_totp_secret()
+        new_user = cls(username=username, salt=salt, password=hashed_password, totp_secret=totp_secret)
         try:
             db.session.add(new_user)
             db.session.commit()
@@ -83,6 +94,28 @@ class Users(db.Model):
             raise ValueError(f"User {username} not found")
         hashed_password = hashlib.sha256((password + user.salt).encode()).hexdigest()
         return hashed_password == user.password
+
+    @classmethod
+    def verify_totp_token(cls, username: str, token: str) -> bool:
+        """
+        Verify a TOTP token for a user.
+
+        Args:
+            username (str): The username of the user.
+            token (str): The TOTP token to verify.
+
+        Returns:
+            bool: True if the token is valid, False otherwise.
+
+        Raises:
+            ValueError: If the user does not exist.
+        """
+        user = cls.query.filter_by(username=username).first()
+        if not user:
+            logger.info("User %s not found", username)
+            raise ValueError(f"User {username} not found")
+        totp = pyotp.TOTP(user.totp_secret)
+        return totp.verify(token)
 
     @classmethod
     def delete_user(cls, username: str) -> None:
