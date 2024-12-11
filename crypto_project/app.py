@@ -78,6 +78,27 @@ def create_app(config_class=ProductionConfig):
             logging.error(f"Unexpected error: {str(e)}")
             return jsonify({'error': str(e)}), 500  # 500 for internal server error
 
+    @app.route('/api/delete-user', methods=['DELETE'])
+    def delete_user():
+        """Delete a user by username."""
+        try:
+            data = request.json
+            username = data.get('username')
+
+            if not username:
+                raise BadRequest("'username' is required.")
+
+            # Delete the user
+            Users.delete_user(username)
+            return jsonify({'status': 'user deleted', 'username': username}), 200
+        except ValueError as e:
+            # Handle user not found error
+            return jsonify({'error': str(e)}), 400
+        except Exception as e:
+            # Handle unexpected errors
+            return jsonify({'error': str(e)}), 500
+
+
     @app.route('/api/login', methods=['POST'])
     def login():
         """Log in a user."""
@@ -86,6 +107,7 @@ def create_app(config_class=ProductionConfig):
             username = data.get('username')
             password = data.get('password')
 
+            # Validate login credentials
             if not Users.check_password(username, password):
                 raise Unauthorized("Invalid username or password.")
 

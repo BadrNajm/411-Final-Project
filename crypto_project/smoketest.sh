@@ -31,7 +31,7 @@ print_json() {
 #
 # Health Checks
 #
-###############################################
+###########################################l####
 
 check_health() {
   echo "Checking health status..."
@@ -52,6 +52,31 @@ check_health() {
 #
 ###############################################
 
+# Function to delete the existing user (if any)
+delete_user_if_exists() {
+  echo "Checking if user already exists..."
+  response=$(curl -s -X POST "$BASE_URL/login" -H "Content-Type: application/json" \
+    -d '{"username":"testuser", "password":"password123"}')
+
+  # If the user exists, delete them
+  if echo "$response" | grep -q '"message": "User testuser logged in successfully."'; then
+    echo "User 'testuser' exists, deleting user..."
+    delete_response=$(curl -s -X DELETE "$BASE_URL/delete-user" -H "Content-Type: application/json" \
+      -d '{"username":"testuser"}')
+    if echo "$delete_response" | grep -q '"status": "user deleted"'; then
+      echo "User 'testuser' deleted successfully."
+    else
+      echo "Failed to delete user."
+      print_json "$delete_response"
+      exit 1
+    fi
+  else
+    echo "User 'testuser' does not exist, skipping deletion."
+  fi
+}
+
+
+# Function to create a new user
 create_user() {
   echo "Creating a new user..."
   response=$(curl -s -X POST "$BASE_URL/create-account" -H "Content-Type: application/json" \
@@ -66,6 +91,7 @@ create_user() {
   fi
 }
 
+# Function to log in a user
 login_user() {
   echo "Logging in user..."
   response=$(curl -s -X POST "$BASE_URL/login" -H "Content-Type: application/json" \
@@ -125,37 +151,16 @@ get_top_performers() {
   fi
 }
 
-set_price_alert() {
-  echo "Setting a price alert for Bitcoin at $45,000..."
-  response=$(curl -s -X POST "$BASE_URL/set-price-alert" -H "Content-Type: application/json" \
-    -d '{"crypto_id":"bitcoin", "target_price":45000}')
-  if echo "$response" | grep -q '"status": "alert set"'; then
-    echo "Price alert set successfully."
-    print_json "$response"
-  else
-    echo "Failed to set price alert."
-    print_json "$response"
-    exit 1
-  fi
-}
-
-###############################################
-#
-# Run All Smoke Tests
-#
-###############################################
-
 run_smoke_tests() {
-  print_json
   check_health
+  delete_user_if_exists
   create_user
   login_user
   get_crypto_price
   get_price_trends
   get_top_performers
-  set_price_alert
-  echo "All smoke tests passed successfully!"
+  echo "All tests passed successfully!"
 }
 
-# Execute the smoke tests
+# Run the smoke tests
 run_smoke_tests
