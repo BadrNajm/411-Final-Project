@@ -31,7 +31,7 @@ print_json() {
 #
 # Health Checks
 #
-###########################################l####
+###############################################
 
 check_health() {
   echo "Checking health status..."
@@ -52,13 +52,11 @@ check_health() {
 #
 ###############################################
 
-# Function to delete the existing user (if any)
 delete_user_if_exists() {
   echo "Checking if user already exists..."
   response=$(curl -s -X POST "$BASE_URL/login" -H "Content-Type: application/json" \
     -d '{"username":"testuser", "password":"password123"}')
 
-  # If the user exists, delete them
   if echo "$response" | grep -q '"message": "User testuser logged in successfully."'; then
     echo "User 'testuser' exists, deleting user..."
     delete_response=$(curl -s -X DELETE "$BASE_URL/delete-user" -H "Content-Type: application/json" \
@@ -75,8 +73,6 @@ delete_user_if_exists() {
   fi
 }
 
-
-# Function to create a new user
 create_user() {
   echo "Creating a new user..."
   response=$(curl -s -X POST "$BASE_URL/create-account" -H "Content-Type: application/json" \
@@ -91,7 +87,6 @@ create_user() {
   fi
 }
 
-# Function to log in a user
 login_user() {
   echo "Logging in user..."
   response=$(curl -s -X POST "$BASE_URL/login" -H "Content-Type: application/json" \
@@ -105,7 +100,6 @@ login_user() {
     exit 1
   fi
 }
-
 
 ###############################################
 #
@@ -152,6 +146,32 @@ get_top_performers() {
   fi
 }
 
+compare_cryptos() {
+  echo "Comparing Bitcoin and Ethereum..."
+  response=$(curl -s -X GET "$BASE_URL/compare-cryptos/bitcoin/ethereum")
+  if echo "$response" | grep -q '"comparison"'; then
+    echo "Crypto comparison fetched successfully."
+    print_json "$response"
+  else
+    echo "Failed to fetch crypto comparison."
+    print_json "$response"
+    exit 1
+  fi
+}
+
+get_historical_data() {
+  echo "Fetching historical data for Bitcoin (7 days)..."
+  response=$(curl -s -X GET "$BASE_URL/historical-data/bitcoin/7")
+  if echo "$response" | grep -q '"historical_data"'; then
+    echo "Historical data fetched successfully."
+    print_json "$response"
+  else
+    echo "Failed to fetch historical data."
+    print_json "$response"
+    exit 1
+  fi
+}
+
 run_smoke_tests() {
   check_health
   delete_user_if_exists
@@ -160,6 +180,8 @@ run_smoke_tests() {
   get_crypto_price
   get_price_trends
   get_top_performers
+  compare_cryptos
+  get_historical_data
   echo "All tests passed successfully!"
 }
 

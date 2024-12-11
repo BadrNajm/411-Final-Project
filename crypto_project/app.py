@@ -154,6 +154,30 @@ def create_app(config_class=ProductionConfig):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
+    @app.route('/api/compare-cryptos/<string:crypto_id1>/<string:crypto_id2>', methods=['GET'])
+    def compare_cryptos(crypto_id1, crypto_id2):
+        """Compare two cryptocurrencies."""
+        try:
+            comparison = crypto_model.compare_cryptos(crypto_id1, crypto_id2)
+            if not comparison:
+                raise ValueError(f"Failed to compare {crypto_id1} and {crypto_id2}.")
+            return jsonify({'comparison': comparison}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        
+        
+    @app.route('/api/historical-data/<string:crypto_id>/<int:days>', methods=['GET'])
+    def get_historical_data(crypto_id, days):
+        """Fetch historical data for a cryptocurrency."""
+        try:
+            trends = crypto_model.get_price_trends(crypto_id, days=str(days))
+            if not trends:
+                raise ValueError(f"Failed to fetch historical data for {crypto_id} over {days} days.")
+            return jsonify({'crypto_id': crypto_id, 'historical_data': trends}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+
     ##########################################################
     #
     # Transaction Management
