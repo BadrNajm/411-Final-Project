@@ -24,13 +24,13 @@ Features:
 1. **Build and Run the Docker Container**
    Use the provided `run_docker.sh` script to build and run the application in a container:
    ```bash
-   ./run_docker.sh
+   bash run_docker.sh
    ```
    
 2. **Run Smoke Tests**
    Use the `smoke_test.sh` script to validate routes:
    ```bash
-   ./smoke_test.sh
+   bash smoke_test.sh
    ```
 
 
