@@ -1,11 +1,10 @@
 from dotenv import load_dotenv
-from flask import Flask, jsonify, make_response, request
+from flask import Flask, jsonify, request
 from werkzeug.exceptions import BadRequest, Unauthorized
 
 from config import ProductionConfig
 from crypto_project.db import db
 from crypto_project.models.transaction_model import TransactionModel
-from crypto_project.models.portfolio_model import Portfolio
 from crypto_project.models.user_model import Users
 from crypto_project.models.cryptodata_model import CryptoDataModel
 
@@ -18,7 +17,7 @@ def create_app(config_class=ProductionConfig):
 
     db.init_app(app)  # Initialize db with app
     with app.app_context():
-        db.create_all()  # Recreate all tables
+        db.create_all()  # Create tables if they don't exist
 
     crypto_model = CryptoDataModel()
 
@@ -72,23 +71,6 @@ def create_app(config_class=ProductionConfig):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/update-password', methods=['PUT'])
-    def update_password():
-        """Update a user's password."""
-        try:
-            data = request.json
-            username = data.get('username')
-            old_password = data.get('old_password')
-            new_password = data.get('new_password')
-
-            if not Users.check_password(username, old_password):
-                raise Unauthorized("Incorrect old password.")
-
-            Users.update_password(username, new_password)
-            return jsonify({'status': 'password updated'}), 200
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
-
     ##########################################################
     #
     # CoinGecko API Interaction
@@ -126,19 +108,42 @@ def create_app(config_class=ProductionConfig):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/compare-cryptos', methods=['GET'])
-    def compare_cryptos():
-        """Compare two cryptocurrencies."""
-        try:
-            crypto1 = request.args.get('crypto1')
-            crypto2 = request.args.get('crypto2')
-            if not crypto1 or not crypto2:
-                raise BadRequest("Both 'crypto1' and 'crypto2' parameters are required.")
+    ##########################################################
+    #
+    # Transaction Management
+    #
+    ##########################################################
 
-            comparison = crypto_model.compare_cryptos(crypto1, crypto2)
-            return jsonify({'comparison': comparison}), 200
+    @app.route('/api/create-transaction', methods=['POST'])
+    def create_transaction():
+        """Create a new transaction."""
+        try:
+            data = request.json
+            user_id = data.get('user_id')
+            crypto_id = data.get('crypto_id')
+            transaction_type = data.get('transaction_type')
+            quantity = data.get('quantity')
+            price = data.get('price')
+
+            if not all([user_id, crypto_id, transaction_type, quantity, price]):
+                raise BadRequest("All fields ('user_id', 'crypto_id', 'transaction_type', 'quantity', 'price') are required.")
+
+            transaction = TransactionModel.create_transaction(
+                user_id=user_id,
+                crypto_id=crypto_id,
+                transaction_type=transaction_type,
+                quantity=quantity,
+                price=price
+            )
+            return jsonify({'status': 'transaction created', 'transaction_id': transaction.id}), 201
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+
+    ##########################################################
+    #
+    # Alerts and Monitoring
+    #
+    ##########################################################
 
     @app.route('/api/set-price-alert', methods=['POST'])
     def set_price_alert():
