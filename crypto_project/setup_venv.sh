@@ -1,14 +1,18 @@
 #!/bin/bash
 # Set the name of the virtual environment directory
-VENV_DIR="meal_max_venv"
+VENV_DIR="crypto_project_venv"
 REQUIREMENTS_FILE="requirements.lock"
+# Function to activate the virtual environment
+activate_venv() {
+  source "$VENV_DIR/bin/activate"
+}
 
 # Check if the virtual environment already exists
 if [ ! -d "$VENV_DIR" ]; then
   echo "Creating virtual environment..."
-  python -m venv "$VENV_DIR"
+  python3 -m venv "$VENV_DIR"
 
-  source "$VENV_DIR/bin/activate"
+  activate_venv
 
   # Install dependencies from requirements.lock if it exists
   if [ -f "$REQUIREMENTS_FILE" ]; then
@@ -19,6 +23,7 @@ if [ ! -d "$VENV_DIR" ]; then
     exit 1
   fi
 else
-  source "$VENV_DIR/bin/activate"
+  activate_venv
   echo "Virtual environment already exists. Activated."
+fisource "$VENV_DIR/bin/activate"
 fi
