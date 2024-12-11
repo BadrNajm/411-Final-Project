@@ -13,3 +13,5 @@ class TestConfig():
     TESTING = True
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'  # Use in-memory database for tests
+    os.environ['DATABASE_URL'] = SQLALCHEMY_DATABASE_URI
+

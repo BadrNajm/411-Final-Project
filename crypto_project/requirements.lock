@@ -25,3 +25,8 @@ tomli==2.0.2
 typing_extensions==4.12.2
 urllib3==2.2.3
 Werkzeug==3.1.2
+qrcode==7.3
+pyotp==2.6.0
+pillow==9.0.1
+python-dotenv==1.0.1
+Werkzeug==3.1.2

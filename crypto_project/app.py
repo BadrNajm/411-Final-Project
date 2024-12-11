@@ -3,7 +3,7 @@ from flask import Flask, jsonify, request
 from werkzeug.exceptions import BadRequest, Unauthorized
 import os
 
-from config import ProductionConfig
+from config import ProductionConfig, TestConfig
 from crypto_project.db import db
 from crypto_project.models.transaction_model import TransactionModel
 from crypto_project.models.user_model import Users

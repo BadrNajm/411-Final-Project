@@ -2,6 +2,7 @@
 # Set the name of the virtual environment directory
 VENV_DIR="crypto_project_venv"
 REQUIREMENTS_FILE="requirements.lock"
+
 # Function to activate the virtual environment
 activate_venv() {
   source "$VENV_DIR/bin/activate"
@@ -25,5 +26,4 @@ if [ ! -d "$VENV_DIR" ]; then
 else
   activate_venv
   echo "Virtual environment already exists. Activated."
-fisource "$VENV_DIR/bin/activate"
 fi
