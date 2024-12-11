@@ -15,290 +15,315 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
+###############################################
+#
+# Utility Functions
+#
+###############################################
+
+print_json() {
+  if [ "$ECHO_JSON" = true ]; then
+    echo "$1" | jq .
+  fi
+}
 
 ###############################################
 #
-# Health checks
+# Health Checks
 #
 ###############################################
 
-# Function to check the health of the service
 check_health() {
   echo "Checking health status..."
-  curl -s -X GET "$BASE_URL/health" | grep -q '"status": "healthy"'
-  if [ $? -eq 0 ]; then
+  response=$(curl -s -X GET "$BASE_URL/health")
+  if echo "$response" | grep -q '"status": "healthy"'; then
     echo "Service is healthy."
+    print_json "$response"
   else
     echo "Health check failed."
+    print_json "$response"
     exit 1
   fi
 }
 
-##############################################
+###############################################
 #
-# User management
+# User Management
 #
-##############################################
+###############################################
 
-# Function to create a user
 create_user() {
   echo "Creating a new user..."
-  curl -s -X POST "$BASE_URL/create-user" -H "Content-Type: application/json" \
-    -d '{"username":"testuser", "password":"password123"}' | grep -q '"status": "user added"'
-  if [ $? -eq 0 ]; then
+  response=$(curl -s -X POST "$BASE_URL/create-user" -H "Content-Type: application/json" \
+    -d '{"username":"testuser", "password":"password123"}')
+  if echo "$response" | grep -q '"status": "user added"'; then
     echo "User created successfully."
+    print_json "$response"
   else
     echo "Failed to create user."
+    print_json "$response"
     exit 1
   fi
 }
 
-# Function to log in a user
 login_user() {
   echo "Logging in user..."
   response=$(curl -s -X POST "$BASE_URL/login" -H "Content-Type: application/json" \
     -d '{"username":"testuser", "password":"password123"}')
   if echo "$response" | grep -q '"message": "User testuser logged in successfully."'; then
     echo "User logged in successfully."
-    if [ "$ECHO_JSON" = true ]; then
-      echo "Login Response JSON:"
-      echo "$response" | jq .
-    fi
+    print_json "$response"
   else
     echo "Failed to log in user."
-    if [ "$ECHO_JSON" = true ]; then
-      echo "Error Response JSON:"
-      echo "$response" | jq .
-    fi
+    print_json "$response"
     exit 1
   fi
 }
 
-# Function to log out a user
 logout_user() {
   echo "Logging out user..."
   response=$(curl -s -X POST "$BASE_URL/logout" -H "Content-Type: application/json" \
     -d '{"username":"testuser"}')
   if echo "$response" | grep -q '"message": "User testuser logged out successfully."'; then
     echo "User logged out successfully."
-    if [ "$ECHO_JSON" = true ]; then
-      echo "Logout Response JSON:"
-      echo "$response" | jq .
-    fi
+    print_json "$response"
   else
     echo "Failed to log out user."
-    if [ "$ECHO_JSON" = true ]; then
-      echo "Error Response JSON:"
-      echo "$response" | jq .
-    fi
+    print_json "$response"
     exit 1
   fi
 }
 
-##############################################
+###############################################
 #
-# Meals
+# CryptoData Model
 #
-##############################################
+###############################################
 
-# Function to add a meal (combatant)
-create_meal() {
-  echo "Adding a combatant..."
-  curl -s -X POST "$BASE_URL/create-meal" -H "Content-Type: application/json" \
-    -d '{"meal":"Spaghetti", "cuisine":"Italian", "price":12.5, "difficulty":"MED"}' | grep -q '"status": "combatant added"'
-  if [ $? -eq 0 ]; then
-    echo "Combatant added successfully."
-  else
-    echo "Failed to add combatant."
-    exit 1
-  fi
-}
-
-# Function to delete a meal by ID (1)
-delete_meal_by_id() {
-  echo "Deleting meal by ID (1)..."
-  response=$(curl -s -X DELETE "$BASE_URL/delete-meal/1")
-  if echo "$response" | grep -q '"status": "meal deleted"'; then
-    echo "Meal deleted successfully by ID (1)."
-  else
-    echo "Failed to delete meal by ID (1)."
-    exit 1
-  fi
-}
-
-# Function to get a meal by ID (1)
-get_meal_by_id() {
-  echo "Getting meal by ID (1)..."
-  response=$(curl -s -X GET "$BASE_URL/get-meal-by-id/1")
+get_crypto_price() {
+  echo "Fetching the price of Bitcoin..."
+  response=$(curl -s -X GET "$BASE_URL/crypto-price/bitcoin")
   if echo "$response" | grep -q '"status": "success"'; then
-    echo "Meal retrieved successfully by ID (1)."
-    if [ "$ECHO_JSON" = true ]; then
-      echo "Meal JSON (ID 1):"
-      echo "$response" | jq .
-    fi
+    echo "Crypto price fetched successfully."
+    print_json "$response"
   else
-    echo "Failed to get meal by ID (1)."
+    echo "Failed to fetch crypto price."
+    print_json "$response"
     exit 1
   fi
 }
 
-# Function to get a meal by name
-get_meal_by_name() {
-  echo "Getting meal by name (Spaghetti)..."
-  response=$(curl -s -X GET "$BASE_URL/get-meal-by-name/Spaghetti")
+get_price_trends() {
+  echo "Fetching price trends for Bitcoin..."
+  response=$(curl -s -X GET "$BASE_URL/crypto-trends/bitcoin?days=7")
   if echo "$response" | grep -q '"status": "success"'; then
-    echo "Meal retrieved successfully by name (Spaghetti)."
-    if [ "$ECHO_JSON" = true ]; then
-      echo "Meal JSON (Spaghetti):"
-      echo "$response" | jq .
-    fi
+    echo "Crypto price trends fetched successfully."
+    print_json "$response"
   else
-    echo "Failed to get meal by name (Spaghetti)."
+    echo "Failed to fetch crypto price trends."
+    print_json "$response"
     exit 1
   fi
 }
 
-############################################
-#
-# Battle
-#
-############################################
-
-# Function to clear the combatants
-clear_combatants() {
-  echo "Clearing combatants..."
-  curl -s -X POST "$BASE_URL/clear-combatants" -H "Content-Type: application/json" | grep -q '"status": "combatants cleared"'
-  if [ $? -eq 0 ]; then
-    echo "Combatants cleared successfully."
-  else
-    echo "Failed to clear combatants."
-    exit 1
-  fi
-}
-
-# Function to get the current list of combatants
-get_combatants() {
-  echo "Getting the current list of combatants..."
-  response=$(curl -s -X GET "$BASE_URL/get-combatants")
-
-  # Check if the response contains combatants or an empty list
-  if echo "$response" | grep -q '"combatants"'; then
-    echo "Combatants retrieved successfully."
-    if [ "$ECHO_JSON" = true ]; then
-      echo "Combatants JSON:"
-      echo "$response" | jq .
-    fi
-  else
-    echo "Failed to get combatants or no combatants found."
-    if [ "$ECHO_JSON" = true ]; then
-      echo "Error or empty response:"
-      echo "$response" | jq .
-    fi
-    exit 1
-  fi
-}
-
-# Function to prepare a combatant for battle
-prep_combatant() {
-  echo "Preparing combatant for battle..."
-  curl -s -X POST "$BASE_URL/prep-combatant" -H "Content-Type: application/json" \
-    -d '{"meal":"Spaghetti"}' | grep -q '"status": "combatant prepared"'
-  if [ $? -eq 0 ]; then
-    echo "Combatant prepared successfully."
-  else
-    echo "Failed to prepare combatant."
-    exit 1
-  fi
-}
-
-# Function to run a battle
-run_battle() {
-  echo "Running a battle..."
-  curl -s -X GET "$BASE_URL/battle" | grep -q '"status": "battle complete"'
-  if [ $? -eq 0 ]; then
-    echo "Battle completed successfully."
-  else
-    echo "Failed to complete battle."
-    exit 1
-  fi
-}
-
-######################################################
-#
-# Leaderboard
-#
-######################################################
-
-# Function to get the leaderboard sorted by wins
-get_leaderboard_wins() {
-  echo "Getting leaderboard sorted by wins..."
-  response=$(curl -s -X GET "$BASE_URL/leaderboard?sort=wins")
+get_top_performers() {
+  echo "Fetching top-performing cryptocurrencies..."
+  response=$(curl -s -X GET "$BASE_URL/top-performers")
   if echo "$response" | grep -q '"status": "success"'; then
-    echo "Leaderboard by wins retrieved successfully."
-    if [ "$ECHO_JSON" = true ]; then
-      echo "Leaderboard JSON (sorted by wins):"
-      echo "$response" | jq .
-    fi
+    echo "Top-performing cryptocurrencies fetched successfully."
+    print_json "$response"
   else
-    echo "Failed to get leaderboard by wins."
+    echo "Failed to fetch top-performing cryptocurrencies."
+    print_json "$response"
     exit 1
   fi
 }
 
-# Function to get the leaderboard sorted by win percentage
-get_leaderboard_win_pct() {
-  echo "Getting leaderboard sorted by win percentage..."
-  response=$(curl -s -X GET "$BASE_URL/leaderboard?sort=win_pct")
+set_price_alert() {
+  echo "Setting a price alert for Bitcoin at $45,000..."
+  response=$(curl -s -X POST "$BASE_URL/set-price-alert" -H "Content-Type: application/json" \
+    -d '{"crypto_id":"bitcoin", "target_price":45000}')
+  if echo "$response" | grep -q '"status": "alert set"'; then
+    echo "Price alert set successfully."
+    print_json "$response"
+  else
+    echo "Failed to set price alert."
+    print_json "$response"
+    exit 1
+  fi
+}
+
+compare_cryptos() {
+  echo "Comparing Bitcoin and Ethereum..."
+  response=$(curl -s -X GET "$BASE_URL/compare-cryptos?crypto1=bitcoin&crypto2=ethereum")
   if echo "$response" | grep -q '"status": "success"'; then
-    echo "Leaderboard by win percentage retrieved successfully."
-    if [ "$ECHO_JSON" = true ]; then
-      echo "Leaderboard JSON (sorted by win percentage):"
-      echo "$response" | jq .
-    fi
+    echo "Cryptos compared successfully."
+    print_json "$response"
   else
-    echo "Failed to get leaderboard by win percentage."
+    echo "Failed to compare cryptos."
+    print_json "$response"
     exit 1
   fi
 }
 
-# Function to initialize the database
-init_db() {
-  echo "Initializing the database..."
-  response=$(curl -s -X POST "$BASE_URL/init-db")
+###############################################
+#
+# Portfolio Management
+#
+###############################################
+
+get_portfolio_value() {
+  echo "Fetching total portfolio value..."
+  response=$(curl -s -X GET "$BASE_URL/portfolio-value/1")
   if echo "$response" | grep -q '"status": "success"'; then
-    echo "Database initialized successfully."
-    if [ "$ECHO_JSON" = true ]; then
-      echo "Initialization Response JSON:"
-      echo "$response" | jq .
-    fi
+    echo "Portfolio value fetched successfully."
+    print_json "$response"
   else
-    echo "Failed to initialize the database."
+    echo "Failed to fetch portfolio value."
+    print_json "$response"
     exit 1
   fi
 }
 
+get_portfolio_percentage() {
+  echo "Fetching portfolio percentage distribution..."
+  response=$(curl -s -X GET "$BASE_URL/portfolio-percentage/1")
+  if echo "$response" | grep -q '"status": "success"'; then
+    echo "Portfolio percentage distribution fetched successfully."
+    print_json "$response"
+  else
+    echo "Failed to fetch portfolio percentage distribution."
+    print_json "$response"
+    exit 1
+  fi
+}
 
+track_profit_loss() {
+  echo "Tracking profit/loss for portfolio..."
+  response=$(curl -s -X GET "$BASE_URL/portfolio-profit-loss/1")
+  if echo "$response" | grep -q '"status": "success"'; then
+    echo "Profit/loss tracked successfully."
+    print_json "$response"
+  else
+    echo "Failed to track profit/loss."
+    print_json "$response"
+    exit 1
+  fi
+}
 
-# Run all the steps in order
-check_health
-init_db
-create_user
-login_user
-create_meal
-clear_combatants
-prep_combatant
-prep_combatant
-get_combatants
-run_battle
-prep_combatant
-run_battle
-prep_combatant
-run_battle
-get_leaderboard_wins
-get_leaderboard_win_pct
-logout_user
-get_meal_by_name
-get_meal_by_id
-delete_meal_by_id
+get_crypto_count() {
+  echo "Fetching crypto count for Bitcoin..."
+  response=$(curl -s -X GET "$BASE_URL/crypto-count/1/bitcoin")
+  if echo "$response" | grep -q '"status": "success"'; then
+    echo "Crypto count fetched successfully."
+    print_json "$response"
+  else
+    echo "Failed to fetch crypto count."
+    print_json "$response"
+    exit 1
+  fi
+}
 
-echo "All tests passed successfully!"
+###############################################
+#
+# Transaction Management
+#
+###############################################
+
+create_transaction() {
+  echo "Creating a new transaction (buy Bitcoin)..."
+  response=$(curl -s -X POST "$BASE_URL/create-transaction" -H "Content-Type: application/json" \
+    -d '{"user_id": 1, "crypto_id": "bitcoin", "action": "buy", "amount": 0.5, "price": 40000}')
+  if echo "$response" | grep -q '"status": "transaction added"'; then
+    echo "Transaction created successfully."
+    print_json "$response"
+  else
+    echo "Failed to create transaction."
+    print_json "$response"
+    exit 1
+  fi
+}
+
+get_all_transactions() {
+  echo "Fetching all transactions for user 1..."
+  response=$(curl -s -X GET "$BASE_URL/get-transactions/1")
+  if echo "$response" | grep -q '"status": "success"'; then
+    echo "Transactions fetched successfully."
+    print_json "$response"
+  else
+    echo "Failed to fetch transactions."
+    print_json "$response"
+    exit 1
+  fi
+}
+
+get_transaction_by_id() {
+  echo "Fetching transaction with ID 1..."
+  response=$(curl -s -X GET "$BASE_URL/get-transaction/1")
+  if echo "$response" | grep -q '"status": "success"'; then
+    echo "Transaction fetched successfully."
+    print_json "$response"
+  else
+    echo "Failed to fetch transaction by ID."
+    print_json "$response"
+    exit 1
+  fi
+}
+
+delete_transaction() {
+  echo "Deleting transaction with ID 1..."
+  response=$(curl -s -X DELETE "$BASE_URL/delete-transaction/1")
+  if echo "$response" | grep -q '"status": "transaction deleted"'; then
+    echo "Transaction deleted successfully."
+    print_json "$response"
+  else
+    echo "Failed to delete transaction."
+    print_json "$response"
+    exit 1
+  fi
+}
+
+validate_balance_for_transaction() {
+  echo "Validating sufficient balance for a $20000 transaction..."
+  response=$(curl -s -X GET "$BASE_URL/validate-transaction/1/20000")
+  if echo "$response" | grep -q '"status": "sufficient funds"'; then
+    echo "Sufficient balance for transaction."
+    print_json "$response"
+  else
+    echo "Insufficient balance for transaction."
+    print_json "$response"
+    exit 1
+  fi
+}
+
+###############################################
+#
+# Run All Smoke Tests
+#
+###############################################
+
+run_smoke_tests() {
+  print_json
+  check_health
+  create_user
+  login_user
+  get_crypto_price
+  get_price_trends
+  get_top_performers
+  set_price_alert
+  compare_cryptos
+  get_portfolio_value
+  get_portfolio_percentage
+  track_profit_loss
+  get_crypto_count
+  create_transaction
+  get_all_transactions
+  get_transaction_by_id
+  delete_transaction
+  validate_balance_for_transaction
+  logout_user
+  echo "All smoke tests passed successfully!"
+}
+
+# Execute the smoke tests
+run_smoke_tests
