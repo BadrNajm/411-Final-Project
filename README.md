@@ -19,143 +19,197 @@ Features:
 - Log to track transactions
 - Leaderboard for top-performing crypto (from battle model)
 
-Route: /create-user
-Request Type: POST  
-Purpose: Creates a new user account with a username and password.
-Request Body:
-    username(String): The user's chosen username.
-    password(String): The user's chosen password.
-Example Request:
-- json
-  {
-    "username": "newuser123",
-    "password": "securepassword"
-  }
-Response Format:
-- Success Response:  
-    - json
-  {
-    "status": "user added",
-    "message": "Account created successfully"
-  }
+  
+## **Setup and Run Using Docker**
+1. **Build and Run the Docker Container**
+   Use the provided `run_docker.sh` script to build and run the application in a container:
+   ```bash
+   ./run_docker.sh
+   ```
+   
+2. **Run Smoke Tests**
+   Use the `smoke_test.sh` script to validate routes:
+   ```bash
+   ./smoke_test.sh
+   ```
 
-Route: /login
-Request Type: POST  
-Purpose: Logs in a user with a username, password, and 2FA token.
-Request Body:
-    username(String): The user's username.
-    password(String): The user's password.
-    token(String): The 2FA token (TOTP).
-Example Request:
-- json
-  {
-    "username": "testuser",
-    "password": "password123",
-    "token": "123456"
-  }
-Response Format:
-- Success Response:  
-    - json
-  {
-    "status": "success",
-    "message": "User testuser logged in successfully."
-  }
 
-Route: /logout
-Request Type: POST  
-Purpose: Logs out a user.
-Request Body:
-    username(String): The user's username.
-Example Request:
-- json
-  {
-    "username": "testuser"
-  }
-Response Format:
-- Success Response:  
-    - json
-  {
-    "status": "success",
-    "message": "User testuser logged out successfully."
-  }
+# Routes Documentation
 
-Route: /health
-Request Type: GET 
-Purpose: Checks if the service is up and running.
-Response Format:
-- Success Response:  
-    - json
+## 1. Health Check
+- **Route:** `/api/health`
+- **Request Type:** `GET`
+- **Purpose:** Verifies if the application is running.
+- **Request Format:** None
+- **Response Format:** JSON
+  - `status` (String): Health status of the application.
+- **Example Request:**
+  ```bash
+  curl -X GET http://127.0.0.1:5000/api/health
+  ```
+- **Example Response:**
+  ```json
   {
     "status": "healthy"
   }
+  ```
 
-Route: /crypto-price/<crypto_id>
-Request Type: GET 
-Purpose: Fetches the current price of a specific cryptocurrency in USD.
-Request Body:
-    crypto_id(String): The cryptocurrency ID (e.g., `bitcoin`).
-Response Format:
-- Success Response:  
-    - json
-  {
-    "status": "success",
-    "crypto_id": "bitcoin",
-    "price": 45000.25
+---
+
+
+## 2. Get Crypto Price
+
+**Route:** `/api/crypto-price/<crypto_id>`  
+**Request Type:** `GET`  
+**Purpose:** Fetches the current price of a cryptocurrency.  
+**Request Format:** None  
+**Response Format:** JSON  
+- `crypto_id` (String): ID of the cryptocurrency.  
+- `price_usd` (Float): Current price in USD.
+
+**Example Request:**
+```bash
+curl -X GET http://127.0.0.1:5000/api/crypto-price/bitcoin
+```
+
+- **Example Response:**
+  ```json
+   {
+      "crypto_id": "bitcoin",
+      "price_usd": 50234.12
   }
 
-Route: /crypto-trends/<crypto_id>
-Request Type: GET
-Purpose: Fetches price trends for a specific cryptocurrency.
-Request Body:
-    crypto_id(String): The cryptocurrency ID (e.g., `bitcoin`).
-    days(String): Time range (e.g., `1`, `7`, `30`, `365`).
-Response Format:
-- Success Response:  
-    - json
-  {
-    "status": "success",
+  ```
+
+---
+
+### 3. Get Crypto Trends
+
+**Route:** `/api/crypto-trends/<crypto_id>`  
+**Request Type:** `GET`  
+**Purpose:** Fetches price trends for a cryptocurrency.  
+**Request Format:** None  
+**Response Format:** JSON  
+- `crypto_id` (String): ID of the cryptocurrency.  
+- `trends` (List): Historical price trends for the cryptocurrency.
+
+**Example Request:**
+```bash
+curl -X GET http://127.0.0.1:5000/api/crypto-trends/bitcoin
+```
+
+- **Example Response:**
+  ```json
+   {
     "crypto_id": "bitcoin",
     "trends": [
-      {"timestamp": 1625097600, "price": 35000.5},
-      {"timestamp": 1625184000, "price": 36000.0}
+        [1634083200000, 60000.23],
+        [1634169600000, 60500.12],
+        [1634256000000, 61000.34]
+    ]
+
+
+
+
+
+---
+### 4. Get Top Cryptocurrencies
+
+**Route:** `/api/top-cryptos`  
+**Request Type:** `GET`  
+**Purpose:** Fetches a list of top-performing cryptocurrencies based on their 24-hour price change.  
+**Request Format:** None  
+**Response Format:** JSON  
+- `top_cryptos` (List): A list of top-performing cryptocurrencies, including their details such as name, symbol, and price.
+
+**Example Request:**
+```bash
+curl -X GET http://127.0.0.1:5000/api/top-cryptos
+```
+- **Example Response:**
+  ```json
+  {
+    "top_cryptos": [
+        {
+            "id": "bitcoin",
+            "symbol": "btc",
+            "name": "Bitcoin",
+            "current_price": 61000,
+            "price_change_percentage_24h": 5.23
+        },
+        {
+            "id": "ethereum",
+            "symbol": "eth",
+            "name": "Ethereum",
+            "current_price": 4000,
+            "price_change_percentage_24h": 3.89
+        }
+    ]
+---
+### 5. Compare Cryptocurrencies
+
+**Route:** `/api/compare-cryptos/<crypto_id1>/<crypto_id2>`  
+**Request Type:** `GET`  
+**Purpose:** Compares two cryptocurrencies side by side based on their market data.  
+**Request Format:** None  
+**Response Format:** JSON  
+- `comparison` (Object): Contains the details of both cryptocurrencies, including their names, symbols, current prices, and market caps.
+
+**Example Request:**
+```bash
+curl -X GET http://127.0.0.1:5000/api/compare-cryptos/bitcoin/ethereum
+```
+- **Example Response:**
+  ```json
+  {
+      "comparison": {
+          "bitcoin": {
+              "id": "bitcoin",
+              "symbol": "btc",
+              "name": "Bitcoin",
+              "current_price": 61000,
+              "market_cap": 1140000000000
+          },
+          "ethereum": {
+              "id": "ethereum",
+              "symbol": "eth",
+              "name": "Ethereum",
+              "current_price": 4000,
+              "market_cap": 450000000000
+          }
+      }
+  }
+
+  ```
+
+  ---
+  ### 6. Get Historical Data
+
+- **Route:** `/api/historical-data/<crypto_id>/<days>`
+- **Request Type:** `GET`
+- **Purpose:** Fetches historical price data for a specific cryptocurrency over a given number of days.
+- **Request Format:** None
+- **Response Format:** JSON  
+  - `crypto_id` (String): ID of the cryptocurrency.  
+  - `historical_data` (Object): Contains historical price data, including timestamps and prices.
+
+**Example Request:**
+```bash
+curl -X GET http://127.0.0.1:5000/api/historical-data/bitcoin/7
+```
+- **Example Response:**
+  ```json
+  {
+  "crypto_id": "bitcoin",
+  "historical_data": {
+    "prices": [
+      [1634083200000, 60000.23],
+      [1634169600000, 60500.12],
+      [1634256000000, 61000.34]
     ]
   }
 
-Route: /portfolio-value/<user_id>
-Request Type: GET
-Purpose: Fetches the total value of a user's portfolio in USD.
-Request Body:
-    user_id(Int): The ID of the user.
-Response Format:
-- Success Response:
-    - json
-  {
-    "status": "success",
-    "total_value": 12500.75
-  }
 
-Route: /create-transaction
-Request Type: POST
-Purpose: Creates a new transaction (buy/sell)
-Request Body:
-    user_id(Int): The user's ID.
-    crypto_id(String): The crytocurrency ID.
-    action(String): buy or sell.
-    amount(Float): The amount of crypto to trade.
-    price(Float): The price per unit.
-Example Request
-- json
-{
-    "user_id": 1,
-    "crypto_id": "bitcoin",
-    "action": "buy",
-    "amount": 0.5,
-    "price": 45000
-}
-Response Format:
-- Success Response:
-    - json
-  {
-    "status": "transaction added",
-    "transaction_id": 123
-  }
+
+
+
