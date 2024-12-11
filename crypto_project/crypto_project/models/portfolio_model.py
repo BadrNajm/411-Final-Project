@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, Optional
-import requests
+from crypto_project.models.cryptodata_model import CryptoDataModel
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -19,6 +19,7 @@ class Portfolio:
         self.user_id = user_id
         self.holdings = holdings
         self.cash_balance = cash_balance
+        self.crypto_data = CryptoDataModel()  # Centralized API interaction
 
     def get_total_value(self, currency: str = 'USD') -> float:
         """
@@ -33,29 +34,12 @@ class Portfolio:
         total_value = 0.0
         for crypto_id, amount in self.holdings.items():
             try:
-                price = self._get_crypto_price(crypto_id, currency)
+                price = self.crypto_data.get_crypto_price(crypto_id)  # Fetch price using CryptoDataModel
                 if price is not None:
                     total_value += price * amount
             except Exception as e:
                 logging.error(f"Error fetching price for {crypto_id}: {e}")
-                continue  # Skip to the next crypto_id
         return total_value
-    
-    @classmethod
-    def get_user_portfolio(cls, user_id: int) -> Optional['Portfolio']:
-        """
-        Retrieves the portfolio for a given user.
-
-        Args:
-            user_id (int): The ID of the user.
-
-        Returns:
-            Portfolio: The user's portfolio instance, or None if not found.
-        """
-        portfolio = cls.query.filter_by(user_id=user_id).first()
-        if not portfolio:
-            raise ValueError(f"No portfolio found for user ID {user_id}.")
-        return portfolio
 
     def get_portfolio_percentage(self) -> Dict[str, float]:
         """
@@ -67,28 +51,29 @@ class Portfolio:
         total_value = self.get_total_value()
         percentages = {}
         for crypto_id, amount in self.holdings.items():
-            price = self._get_crypto_price(crypto_id)
-            value = price * amount
-            percentages[crypto_id] = (value / total_value) * 100
+            price = self.crypto_data.get_crypto_price(crypto_id)  # Fetch price using CryptoDataModel
+            if price is not None and total_value > 0:
+                value = price * amount
+                percentages[crypto_id] = (value / total_value) * 100
         logging.info(f"Portfolio percentage breakdown for user {self.user_id}: {percentages}")
         return percentages
 
-    def track_profit_loss(self, purchase_prices: Dict[str, float], currency: str = 'USD') -> Dict[str, float]:
+    def track_profit_loss(self, purchase_prices: Dict[str, float]) -> Dict[str, float]:
         """
         Tracks profit or loss for each cryptocurrency based on purchase prices.
 
         Args:
             purchase_prices (Dict[str, float]): A dictionary with cryptocurrency IDs and their purchase prices.
-            currency (str): The currency in which to calculate profit/loss (default is 'USD').
 
         Returns:
             Dict[str, float]: A dictionary with cryptocurrency IDs and their profit/loss amounts.
         """
         profit_loss = {}
         for crypto_id, amount in self.holdings.items():
-            current_price = self._get_crypto_price(crypto_id, currency)
+            current_price = self.crypto_data.get_crypto_price(crypto_id)  # Fetch price using CryptoDataModel
             purchase_price = purchase_prices.get(crypto_id, 0)
-            profit_loss[crypto_id] = (current_price - purchase_price) * amount
+            if current_price is not None:
+                profit_loss[crypto_id] = (current_price - purchase_price) * amount
         logging.info(f"Profit/loss for user {self.user_id}: {profit_loss}")
         return profit_loss
 
@@ -106,52 +91,30 @@ class Portfolio:
         logging.info(f"User {self.user_id} holds {count} units of {crypto_id}")
         return count
 
-    def _get_crypto_price(self, crypto_id: str, currency: str = 'USD') -> float:
+    @classmethod
+    def get_user_portfolio(cls, user_id: int) -> Optional['Portfolio']:
         """
-        Fetches the current price of a cryptocurrency using the CoinGecko API.
+        Retrieves the portfolio for a given user.
 
         Args:
-            crypto_id (str): The ID of the cryptocurrency (e.g., 'bitcoin').
-            currency (str): The currency in which to get the price (default is 'USD').
+            user_id (int): The ID of the user.
 
         Returns:
-            float: The current price of the cryptocurrency. Returns 0.0 if the price can't be fetched.
+            Portfolio: The user's portfolio instance, or None if not found.
         """
-        url = "https://api.coingecko.com/api/v3/simple/price"
-        params = {
-            'ids': crypto_id,
-            'vs_currencies': currency.lower()
-        }
-
-        try:
-            response = requests.get(url, params=params)
-            response.raise_for_status()  # Raises an exception for HTTP errors (e.g., 404, 500)
-            
-            data = response.json()
-            price = data.get(crypto_id, {}).get(currency.lower(), None)
-
-            if price is not None:
-                logging.info(f"Fetched price for {crypto_id}: {price} {currency.upper()}")
-                return price
-            else:
-                logging.error(f"Price for {crypto_id} in {currency.upper()} not found in response.")
-                return 0.0
-
-        except requests.RequestException as e:
-            logging.error(f"Network error while fetching price for {crypto_id}: {e}")
-            return 0.0
-        except ValueError as e:
-            logging.error(f"Invalid JSON response while fetching price for {crypto_id}: {e}")
-            return 0.0
+        portfolio = cls.query.filter_by(user_id=user_id).first()
+        if not portfolio:
+            raise ValueError(f"No portfolio found for user ID {user_id}.")
+        return portfolio
 
     def get_cash_balance(self) -> float:
-            """
-            Retrieves the user's current cash balance.
+        """
+        Retrieves the user's current cash balance.
 
-            Returns:
-                float: The user's available fiat currency balance.
-            """
-            return self.cash_balance
+        Returns:
+            float: The user's available fiat currency balance.
+        """
+        return self.cash_balance
 
     def adjust_cash_balance(self, amount: float) -> None:
         """

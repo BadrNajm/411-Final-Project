@@ -2,6 +2,8 @@ from datetime import datetime, timedelta
 from sqlalchemy import Column, Integer, Float, String, Boolean, DateTime
 from crypto_project.db import db
 from crypto_project.models.portfolio_model import Portfolio
+from crypto_project.models.cryptodata_model import CryptoDataModel
+import logging
 
 class TransactionModel(db.Model):
     __tablename__ = 'transactions'
@@ -38,20 +40,18 @@ class TransactionModel(db.Model):
             crypto_id (str): The ID of the cryptocurrency being traded.
             transaction_type (str): The type of transaction ("buy" or "sell").
             quantity (float): The quantity of the cryptocurrency being traded.
-            price (float): The price of the cryptocurrency at the time of the transaction.
+            price (float): The current price of the cryptocurrency.
             target_price (float, optional): The target price for a custom buy/sell transaction.
             recurring (bool, optional): Whether the transaction is recurring (e.g., daily).
 
-        Raises:
-            ValueError: If the transaction type is invalid or the user has insufficient funds/holdings.
-
         Returns:
             TransactionModel: The newly created transaction.
-        """
-        # Validate inputs
-        if quantity <= 0 or price <= 0:
-            raise ValueError("Quantity and price must be positive numbers.")
 
+        Raises:
+            ValueError: If the transaction is invalid.
+        """
+        if quantity <= 0:
+            raise ValueError("Quantity must be a positive number.")
         if transaction_type not in ["buy", "sell"]:
             raise ValueError("Transaction type must be 'buy' or 'sell'.")
 
@@ -59,29 +59,19 @@ class TransactionModel(db.Model):
         user_portfolio = Portfolio.get_user_portfolio(user_id)
 
         if transaction_type == "buy":
-            # Validate cash balance
             total_cost = quantity * price
             if not user_portfolio.validate_cash_for_purchase(total_cost):
-                raise ValueError(f"Insufficient cash balance. You need {total_cost}, but have {user_portfolio.get_cash_balance()}.")
-
-            # Deduct cash balance
+                raise ValueError("Insufficient cash balance.")
             user_portfolio.adjust_cash_balance(-total_cost)
-
-            # Update portfolio holdings
             user_portfolio.holdings[crypto_id] = user_portfolio.holdings.get(crypto_id, 0) + quantity
 
         elif transaction_type == "sell":
-            # Validate crypto holdings
             user_crypto_balance = user_portfolio.get_crypto_count(crypto_id)
             if quantity > user_crypto_balance:
-                raise ValueError(f"Insufficient balance for {crypto_id}. You have {user_crypto_balance}, tried to sell {quantity}.")
-
-            # Update portfolio holdings
+                raise ValueError("Insufficient cryptocurrency balance.")
             user_portfolio.holdings[crypto_id] -= quantity
             if user_portfolio.holdings[crypto_id] <= 0:
-                del user_portfolio.holdings[crypto_id]  # Remove the crypto if balance is zero
-
-            # Add cash balance
+                del user_portfolio.holdings[crypto_id]
             total_revenue = quantity * price
             user_portfolio.adjust_cash_balance(total_revenue)
 
@@ -99,6 +89,7 @@ class TransactionModel(db.Model):
         db.session.commit()
         return new_transaction
 
+
     @classmethod
     def edit_transaction(cls, transaction_id, **kwargs):
         """
@@ -114,16 +105,21 @@ class TransactionModel(db.Model):
         Returns:
                 TransactionModel: The updated transaction.
         """
+        logging.info(f"Editing transaction {transaction_id} with updates {kwargs}.")
         transaction = cls.query.filter_by(id=transaction_id, active=True).first()
         if not transaction:
+            logging.error(f"Transaction with ID {transaction_id} not found or inactive.")
             raise ValueError(f"Transaction with ID {transaction_id} not found or inactive.")
 
         for key, value in kwargs.items():
             if hasattr(transaction, key):
                 setattr(transaction, key, value)
+                logging.info(f"Updated {key} to {value}.")
             else:
+                logging.error(f"Invalid attribute: {key}")
                 raise ValueError(f"Invalid attribute: {key}")
         db.session.commit()
+        logging.info(f"Transaction {transaction_id} updated successfully.")
         return transaction
 
     @classmethod
@@ -140,39 +136,36 @@ class TransactionModel(db.Model):
         Returns:
             None
         """
+        logging.info(f"Deleting transaction {transaction_id}.")
         transaction = cls.query.filter_by(id=transaction_id, active=True).first()
         if not transaction:
+            logging.error(f"Transaction with ID {transaction_id} not found or already inactive.")
             raise ValueError(f"Transaction with ID {transaction_id} not found or already inactive.")
 
         transaction.active = False
         db.session.commit()
+        logging.info(f"Transaction {transaction_id} marked as inactive.")
 
     @classmethod
-    def execute_custom_transactions(cls, current_price_data):
+    def execute_custom_transactions(cls):
         """
         Execute custom buy/sell transactions if target price is reached.
-
-        Args:
-            current_price_data (dict): A dictionary of current cryptocurrency prices.
-
-        Returns:
-            None
         """
+        crypto_data = CryptoDataModel()
         pending_transactions = cls.query.filter_by(active=True).filter(cls.target_price.isnot(None)).all()
 
         for transaction in pending_transactions:
-            current_price = current_price_data.get(transaction.crypto_id)
+            current_price = crypto_data.get_crypto_price(transaction.crypto_id)
             if not current_price:
                 continue
 
             if transaction.transaction_type == "buy" and current_price <= transaction.target_price:
                 transaction.active = False
                 db.session.commit()
-                
+
             elif transaction.transaction_type == "sell" and current_price >= transaction.target_price:
                 transaction.active = False
                 db.session.commit()
-               
 
     @classmethod
     def execute_recurring_transactions(cls):
@@ -183,15 +176,14 @@ class TransactionModel(db.Model):
             None
 
         Returns:
-
             None
         """
         recurring_transactions = cls.query.filter_by(recurring=True, active=True).all()
-
         for transaction in recurring_transactions:
-            
-            transaction.timestamp = datetime.utcnow() + timedelta(days=1)  # Update timestamp for next execution
-            db.session.commit()
+            transaction.timestamp = datetime.utcnow() + timedelta(days=1)
+            db.session.add(transaction)  
+        db.session.commit()  
+
 
     @classmethod
     def get_user_transactions(cls, user_id):

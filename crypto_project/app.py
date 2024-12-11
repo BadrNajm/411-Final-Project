@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from flask import Flask, jsonify, make_response, Response, request
+from flask import Flask, jsonify, make_response, request
 from werkzeug.exceptions import BadRequest, Unauthorized
 
 from config import ProductionConfig
@@ -7,6 +7,7 @@ from crypto_project.db import db
 from crypto_project.models.transaction_model import TransactionModel
 from crypto_project.models.portfolio_model import Portfolio
 from crypto_project.models.user_model import Users
+from crypto_project.models.cryptodata_model import CryptoDataModel
 
 # Load environment variables from .env file
 load_dotenv()
@@ -19,6 +20,8 @@ def create_app(config_class=ProductionConfig):
     with app.app_context():
         db.create_all()  # Recreate all tables
 
+    crypto_model = CryptoDataModel()
+
     ####################################################
     #
     # Healthchecks
@@ -26,123 +29,135 @@ def create_app(config_class=ProductionConfig):
     ####################################################
 
     @app.route('/api/health', methods=['GET'])
-    def healthcheck() -> Response:
+    def healthcheck():
         """Health check route to verify the service is running."""
-        app.logger.info('Health check')
-        return make_response(jsonify({'status': 'healthy'}), 200)
+        return jsonify({'status': 'healthy'}), 200
 
     ##########################################################
     #
-    # User management
+    # User Management
     #
     ##########################################################
 
-    @app.route('/api/create-user', methods=['POST'])
-    def create_user() -> Response:
-        """Route to create a new user."""
-        app.logger.info('Creating new user')
+    @app.route('/api/create-account', methods=['POST'])
+    def create_account():
+        """Create a new user account."""
         try:
-            data = request.get_json()
+            data = request.json
             username = data.get('username')
             password = data.get('password')
 
             if not username or not password:
-                return make_response(jsonify({'error': 'Invalid input, both username and password are required'}), 400)
+                raise BadRequest("Both 'username' and 'password' are required.")
 
             Users.create_user(username, password)
-            app.logger.info("User added: %s", username)
-            return make_response(jsonify({'status': 'user added', 'username': username}), 201)
+            return jsonify({'status': 'account created', 'username': username}), 201
         except Exception as e:
-            app.logger.error("Failed to add user: %s", str(e))
-            return make_response(jsonify({'error': str(e)}), 500)
+            return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/delete-user', methods=['DELETE'])
-    def delete_user() -> Response:
-        """Route to delete a user."""
-        app.logger.info('Deleting user')
+    @app.route('/api/login', methods=['POST'])
+    def login():
+        """Log in a user."""
         try:
-            data = request.get_json()
+            data = request.json
             username = data.get('username')
+            password = data.get('password')
 
-            if not username:
-                return make_response(jsonify({'error': 'Invalid input, username is required'}), 400)
+            if not Users.check_password(username, password):
+                raise Unauthorized("Invalid username or password.")
 
-            Users.delete_user(username)
-            app.logger.info("User deleted: %s", username)
-            return make_response(jsonify({'status': 'user deleted', 'username': username}), 200)
+            return jsonify({'message': f"User {username} logged in successfully."}), 200
+        except Unauthorized as e:
+            return jsonify({'error': str(e)}), 401
         except Exception as e:
-            app.logger.error("Failed to delete user: %s", str(e))
-            return make_response(jsonify({'error': str(e)}), 500)
+            return jsonify({'error': str(e)}), 500
 
-    ##########################################################
-    #
-    # Transactions
-    #
-    ##########################################################
-
-    @app.route('/api/create-transaction', methods=['POST'])
-    def create_transaction() -> Response:
-        """Route to create a new transaction."""
-        app.logger.info('Creating new transaction')
+    @app.route('/api/update-password', methods=['PUT'])
+    def update_password():
+        """Update a user's password."""
         try:
-            data = request.get_json()
-            user_id = data.get('user_id')
+            data = request.json
+            username = data.get('username')
+            old_password = data.get('old_password')
+            new_password = data.get('new_password')
+
+            if not Users.check_password(username, old_password):
+                raise Unauthorized("Incorrect old password.")
+
+            Users.update_password(username, new_password)
+            return jsonify({'status': 'password updated'}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    ##########################################################
+    #
+    # CoinGecko API Interaction
+    #
+    ##########################################################
+
+    @app.route('/api/crypto-price/<string:crypto_id>', methods=['GET'])
+    def get_crypto_price(crypto_id):
+        """Fetch the current price of a cryptocurrency."""
+        try:
+            price = crypto_model.get_crypto_price(crypto_id)
+            if price is None:
+                raise ValueError(f"Failed to fetch price for {crypto_id}.")
+            return jsonify({'crypto_id': crypto_id, 'price_usd': price}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/crypto-trends/<string:crypto_id>', methods=['GET'])
+    def get_crypto_trends(crypto_id):
+        """Fetch price trends for a cryptocurrency."""
+        try:
+            trends = crypto_model.get_price_trends(crypto_id)
+            if not trends:
+                raise ValueError(f"Failed to fetch trends for {crypto_id}.")
+            return jsonify({'crypto_id': crypto_id, 'trends': trends}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/top-cryptos', methods=['GET'])
+    def get_top_cryptos():
+        """Fetch top-performing cryptocurrencies."""
+        try:
+            top_cryptos = crypto_model.get_top_performing_cryptos()
+            return jsonify({'top_cryptos': top_cryptos}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/compare-cryptos', methods=['GET'])
+    def compare_cryptos():
+        """Compare two cryptocurrencies."""
+        try:
+            crypto1 = request.args.get('crypto1')
+            crypto2 = request.args.get('crypto2')
+            if not crypto1 or not crypto2:
+                raise BadRequest("Both 'crypto1' and 'crypto2' parameters are required.")
+
+            comparison = crypto_model.compare_cryptos(crypto1, crypto2)
+            return jsonify({'comparison': comparison}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/set-price-alert', methods=['POST'])
+    def set_price_alert():
+        """Set a price alert for a cryptocurrency."""
+        try:
+            data = request.json
             crypto_id = data.get('crypto_id')
-            transaction_type = data.get('transaction_type')
-            quantity = data.get('quantity')
-            price = data.get('price')
+            target_price = data.get('target_price')
 
-            if not user_id or not crypto_id or not transaction_type or not quantity or not price:
-                return make_response(jsonify({'error': 'All fields are required'}), 400)
+            if not crypto_id or target_price is None:
+                raise BadRequest("'crypto_id' and 'target_price' are required.")
 
-            # Ensure Portfolio instance is available for the user
-            portfolio = Portfolio(user_id=user_id, holdings={}, cash_balance=1000.0)  # Mock Portfolio for simplicity
+            alert_set = crypto_model.set_price_alert(crypto_id, target_price)
+            if not alert_set:
+                raise ValueError("Failed to set price alert.")
 
-            # Create transaction
-            TransactionModel.create_transaction(
-                user_id=user_id,
-                crypto_id=crypto_id,
-                transaction_type=transaction_type,
-                quantity=quantity,
-                price=price
-            )
-            app.logger.info("Transaction created: %s", data)
-            return make_response(jsonify({'status': 'transaction created'}), 201)
+            return jsonify({'status': 'alert set', 'crypto_id': crypto_id, 'target_price': target_price}), 201
         except Exception as e:
-            app.logger.error("Failed to create transaction: %s", str(e))
-            return make_response(jsonify({'error': str(e)}), 500)
-
-    @app.route('/api/get-user-transactions/<int:user_id>', methods=['GET'])
-    def get_user_transactions(user_id: int) -> Response:
-        """Route to get all transactions for a user."""
-        try:
-            app.logger.info(f"Getting transactions for user ID: {user_id}")
-            transactions = TransactionModel.get_user_transactions(user_id)
-            return make_response(jsonify({'status': 'success', 'transactions': [tx.serialize() for tx in transactions]}), 200)
-        except Exception as e:
-            app.logger.error("Failed to retrieve transactions: %s", str(e))
-            return make_response(jsonify({'error': str(e)}), 500)
-
-    ##########################################################
-    #
-    # Initialize Database
-    #
-    ##########################################################
-
-    @app.route('/api/init-db', methods=['POST'])
-    def init_db():
-        """Route to initialize or recreate database tables."""
-        try:
-            with app.app_context():
-                app.logger.info("Dropping all existing tables.")
-                db.drop_all()
-                app.logger.info("Creating all tables from models.")
-                db.create_all()
-            app.logger.info("Database initialized successfully.")
-            return jsonify({"status": "success", "message": "Database initialized successfully."}), 200
-        except Exception as e:
-            app.logger.error("Failed to initialize database: %s", str(e))
-            return jsonify({"status": "error", "message": "Failed to initialize database."}), 500
+            return jsonify({'error': str(e)}), 500
 
     return app
 
