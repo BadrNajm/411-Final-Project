@@ -8,6 +8,7 @@ from crypto_project.db import db
 from crypto_project.models.transaction_model import TransactionModel
 from crypto_project.models.user_model import Users
 from crypto_project.models.cryptodata_model import CryptoDataModel
+import logging
 
 # Load environment variables from .env file
 load_dotenv()
@@ -52,13 +53,30 @@ def create_app(config_class=ProductionConfig):
             username = data.get('username')
             password = data.get('password')
 
+            # Validate inputs
             if not username or not password:
-                raise BadRequest("Both 'username' and 'password' are required.")
+                raise BadRequest("'username' and 'password' are required.")
 
+            # Check if username already exists
+            if Users.query.filter_by(username=username).first():
+                raise ValueError(f"User with username '{username}' already exists.")
+
+            # Create new user
             Users.create_user(username, password)
             return jsonify({'status': 'account created', 'username': username}), 201
+
+        except ValueError as e:
+            # Handle duplicate username error
+            logging.error(f"Error creating user: {str(e)}")
+            return jsonify({'error': str(e)}), 400  # 400 for bad request (duplicate username)
+        except BadRequest as e:
+            # Handle missing input error
+            logging.error(f"Bad request error: {str(e)}")
+            return jsonify({'error': str(e)}), 400  # 400 for missing input
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            # Handle unexpected errors
+            logging.error(f"Unexpected error: {str(e)}")
+            return jsonify({'error': str(e)}), 500  # 500 for internal server error
 
     @app.route('/api/login', methods=['POST'])
     def login():
@@ -159,16 +177,28 @@ def create_app(config_class=ProductionConfig):
             crypto_id = data.get('crypto_id')
             target_price = data.get('target_price')
 
+            # Validate inputs
             if not crypto_id or target_price is None:
                 raise BadRequest("'crypto_id' and 'target_price' are required.")
 
+            logging.info(f"Setting price alert for {crypto_id} at {target_price}.")
+
+            # Attempt to set the price alert
             alert_set = crypto_model.set_price_alert(crypto_id, target_price)
             if not alert_set:
-                raise ValueError("Failed to set price alert.")
+                raise ValueError(f"Failed to set price alert for {crypto_id}.")
 
             return jsonify({'status': 'alert set', 'crypto_id': crypto_id, 'target_price': target_price}), 201
+        except BadRequest as e:
+            logging.error(f"Bad request error: {str(e)}")
+            return jsonify({'error': str(e)}), 400
+        except ValueError as e:
+            logging.error(f"Value error: {str(e)}")
+            return jsonify({'error': str(e)}), 400
         except Exception as e:
+            logging.error(f"Unexpected error: {str(e)}")
             return jsonify({'error': str(e)}), 500
+
 
     return app
 

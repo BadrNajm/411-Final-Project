@@ -13,6 +13,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install SQLite3
 RUN apt-get update && apt-get install -y sqlite3
 
+# Copy the .env file to the container
+COPY .env /app/.env
+COPY ./sql/create_db.sh /app/sql/create_db.sh
+COPY ./sql/create_users_table.sql /app/sql/users.sql
+COPY ./sql/create_transactions_table.sql /app/sql/transaction.sql
+
 # Define a volume for persisting the database
 VOLUME ["/app/db"]
 

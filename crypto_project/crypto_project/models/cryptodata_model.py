@@ -91,35 +91,26 @@ class CryptoDataModel:
             return []
 
     def set_price_alert(self, crypto_id: str, target_price: float) -> bool:
-        """
-        Set price alert for a specific cryptocurrency.
-        
-        Args:
-            crypto_id (str): The ID of the cryptocurrency
-            target_price (float): Target price for alert
-            
-        Returns:
-            bool: True if alert is set successfully
-        """
-        try:
-        # Get current price to validate crypto_id and compare
-            current_price = self.get_crypto_price(crypto_id)
-            
-            if current_price is None:
-                return False
-                
-            alert = {
-                'crypto_id': crypto_id,
-                'target_price': target_price,
-                'current_price': current_price,
-                'timestamp': datetime.now().isoformat()
-            }
-            
-            return True
-        
-        except Exception as e:
-            return False
+            """Set price alert for a specific cryptocurrency."""
+            try:
+                # Get current price to validate crypto_id and compare
+                current_price = self.get_crypto_price(crypto_id)
+                if current_price is None:
+                    logging.error(f"Cannot set alert: Could not fetch price for {crypto_id}.")
+                    return False
 
+                alert = {
+                    'crypto_id': crypto_id,
+                    'target_price': target_price,
+                    'current_price': current_price,
+                    'timestamp': datetime.now().isoformat()
+                }
+                logging.info(f"Price alert set for {crypto_id}: {alert}")
+                return True
+
+            except Exception as e:
+                logging.error(f"Error setting price alert for {crypto_id}: {e}")
+                return False
     def compare_cryptos(self, crypto_id1: str, crypto_id2: str) -> Dict:
         """
         Compare two cryptocurrencies side by side.
