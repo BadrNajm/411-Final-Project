@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from werkzeug.exceptions import BadRequest, Unauthorized
+import os
 
 from config import ProductionConfig
 from crypto_project.db import db
@@ -14,6 +15,11 @@ load_dotenv()
 def create_app(config_class=ProductionConfig):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    # Database Configuration
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')  # Use DATABASE_URL from .env
+    
+
+    
 
     db.init_app(app)  # Initialize db with app
     with app.app_context():
